@@ -1,8 +1,14 @@
 # Build stage
-FROM rust:1.75-alpine AS builder
+FROM rust:1.89-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache musl-dev
+# Install build dependencies including OpenSSL and SQLite
+RUN apk add --no-cache \
+    musl-dev \
+    openssl-dev \
+    openssl-libs-static \
+    pkgconfig \
+    sqlite-dev \
+    sqlite-static
 
 WORKDIR /app
 
@@ -18,10 +24,8 @@ RUN cargo build --release
 # Runtime stage
 FROM alpine:latest
 
-# Install runtime dependencies
-RUN apk add --no-cache \
-    ca-certificates \
-    sqlite
+# Install runtime dependencies (only ca-certificates for HTTPS)
+RUN apk add --no-cache ca-certificates
 
 # Create a non-root user
 RUN addgroup -g 1000 bot && \

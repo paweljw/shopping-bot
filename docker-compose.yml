@@ -17,14 +17,4 @@ services:
       - RUST_LOG=info
     volumes:
       # Persist the SQLite database
-      - shopping-bot-data:/data
-    networks:
-      - bot-network
-
-volumes:
-  shopping-bot-data:
-    driver: local
-
-networks:
-  bot-network:
-    driver: bridge
+      - .data:/data
