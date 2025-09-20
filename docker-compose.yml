@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  shopping-bot:
+    build: .
+    container_name: shopping-bot
+    restart: unless-stopped
+    environment:
+      # Required: Your Telegram bot token
+      - BOT_TOKEN=${BOT_TOKEN}
+
+      # Optional: Comma-separated list of allowed chat IDs
+      # Leave empty or unset to allow all chats
+      - ALLOWED_CHAT_IDS=${ALLOWED_CHAT_IDS:-}
+
+      # Set log level
+      - RUST_LOG=info
+    volumes:
+      # Persist the SQLite database
+      - shopping-bot-data:/data
+    networks:
+      - bot-network
+
+volumes:
+  shopping-bot-data:
+    driver: local
+
+networks:
+  bot-network:
+    driver: bridge
