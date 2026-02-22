@@ -55,6 +55,10 @@ impl Config {
     pub fn api_port(&self) -> u16 {
         self.api_port
     }
+
+    pub fn allowed_chat_ids(&self) -> &[i64] {
+        &self.allowed_chat_ids
+    }
 }
 
 fn get_env_var(name: &str) -> Result<String, String> {

@@ -8,12 +8,39 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use teloxide::prelude::*;
 
 use crate::persistence_sqlite::ListRepo;
 
 pub struct ApiState {
     pub db: Arc<ListRepo>,
     pub api_token: String,
+    pub bot: Bot,
+    pub notify_chat_ids: Vec<ChatId>,
+}
+
+impl ApiState {
+    async fn format_list(&self) -> String {
+        match self.db.list().await {
+            Ok(items) if items.is_empty() => "\n📋 List is now empty.".to_string(),
+            Ok(items) => {
+                let mut text = "\n\n📋 Current shopping list:\n".to_string();
+                for item in items {
+                    text.push_str(&format!("  {}. {}\n", item.id, item.name));
+                }
+                text
+            }
+            Err(e) => format!("\n❌ Error retrieving list: {}", e),
+        }
+    }
+
+    async fn notify(&self, message: String) {
+        for chat_id in &self.notify_chat_ids {
+            if let Err(e) = self.bot.send_message(*chat_id, &message).await {
+                log::error!("Failed to notify chat {}: {}", chat_id, e);
+            }
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -104,10 +131,14 @@ async fn add_item(
     check_auth(&headers, &state.api_token)?;
 
     match state.db.add_item_returning_id(&body.name).await {
-        Ok(item) => Ok((
-            StatusCode::CREATED,
-            Json(ItemResponse { id: item.id, name: item.name }),
-        ).into_response()),
+        Ok(item) => {
+            let list = state.format_list().await;
+            state.notify(format!("✅ Added '{}' to list (via API){}", item.name, list)).await;
+            Ok((
+                StatusCode::CREATED,
+                Json(ItemResponse { id: item.id, name: item.name }),
+            ).into_response())
+        }
         Err(e) => Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse { error: e }),
@@ -123,7 +154,11 @@ async fn remove_item(
     check_auth(&headers, &state.api_token)?;
 
     match state.db.remove_item(id).await {
-        Ok(()) => Ok(StatusCode::NO_CONTENT.into_response()),
+        Ok(()) => {
+            let list = state.format_list().await;
+            state.notify(format!("✅ Removed item #{} from list (via API){}", id, list)).await;
+            Ok(StatusCode::NO_CONTENT.into_response())
+        }
         Err(e) => Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse { error: e }),
@@ -138,7 +173,10 @@ async fn clear_items(
     check_auth(&headers, &state.api_token)?;
 
     match state.db.clear().await {
-        Ok(()) => Ok(StatusCode::NO_CONTENT.into_response()),
+        Ok(()) => {
+            state.notify("🗑️ List cleared. (via API)".to_string()).await;
+            Ok(StatusCode::NO_CONTENT.into_response())
+        }
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse { error: e }),

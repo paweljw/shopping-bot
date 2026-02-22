@@ -27,10 +27,19 @@ async fn main() {
             .expect("Failed to initialize database"),
     );
 
+    let bot = teloxide::Bot::new(config.bot_token());
+
     if let Some(api_token) = config.api_token() {
+        let notify_chat_ids: Vec<ChatId> = config
+            .allowed_chat_ids()
+            .iter()
+            .map(|&id| ChatId(id))
+            .collect();
         let api_state = Arc::new(api::ApiState {
             db: db.clone(),
             api_token: api_token.to_string(),
+            bot: bot.clone(),
+            notify_chat_ids,
         });
         let port = config.api_port();
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
@@ -44,8 +53,6 @@ async fn main() {
             }
         });
     }
-
-    let bot = teloxide::Bot::new(config.bot_token());
 
     let me = bot.get_me().send().await.unwrap();
     log::info!("Bot starting as {:?}", me);
