@@ -38,5 +38,6 @@ COPY --from=builder /app/target/release/shopping-bot /app/shopping-bot
 # Set the data directory as a volume
 VOLUME ["/data"]
 
-# Run the bot
+EXPOSE 8080
+
 CMD ["/app/shopping-bot"]
