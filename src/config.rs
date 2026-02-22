@@ -3,6 +3,8 @@ use std::env;
 pub struct Config {
     token: String,
     allowed_chat_ids: Vec<i64>,
+    api_token: Option<String>,
+    api_port: u16,
 }
 
 impl Config {
@@ -19,9 +21,18 @@ impl Config {
             Err(_) => Vec::new(), // If not set, allow all chats (empty list means no restrictions)
         };
 
+        let api_token = env::var("API_TOKEN").ok();
+
+        let api_port = env::var("API_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080);
+
         Ok(Config {
             token,
             allowed_chat_ids,
+            api_token,
+            api_port,
         })
     }
 
@@ -30,12 +41,19 @@ impl Config {
     }
 
     pub fn is_chat_allowed(&self, chat_id: i64) -> bool {
-        // If no chat IDs are configured, allow all
         if self.allowed_chat_ids.is_empty() {
             true
         } else {
             self.allowed_chat_ids.contains(&chat_id)
         }
+    }
+
+    pub fn api_token(&self) -> Option<&str> {
+        self.api_token.as_deref()
+    }
+
+    pub fn api_port(&self) -> u16 {
+        self.api_port
     }
 }
 

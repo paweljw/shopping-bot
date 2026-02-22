@@ -53,6 +53,29 @@ impl ListRepo {
             .map_err(|e| format!("Failed to add item: {}", e))
     }
 
+    pub async fn add_item_returning_id(&self, name: &str) -> Result<ListItem, String> {
+        if name.is_empty() {
+            return Err("Name cannot be empty".to_string());
+        }
+
+        if name.len() > 100 {
+            return Err("Name is too long (max 100 characters)".to_string());
+        }
+
+        let name = name.to_string();
+        self.conn
+            .call(move |conn| {
+                conn.execute(
+                    "INSERT INTO list_items (name) VALUES (?1)",
+                    params![&name],
+                )?;
+                let id = conn.last_insert_rowid() as u64;
+                Ok(ListItem { id, name })
+            })
+            .await
+            .map_err(|e| format!("Failed to add item: {}", e))
+    }
+
     pub async fn remove_item(&self, id: u64) -> Result<(), String> {
         let affected = self.conn
             .call(move |conn| {
