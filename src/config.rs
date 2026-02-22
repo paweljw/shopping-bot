@@ -21,7 +21,7 @@ impl Config {
             Err(_) => Vec::new(), // If not set, allow all chats (empty list means no restrictions)
         };
 
-        let api_token = env::var("API_TOKEN").ok();
+        let api_token = env::var("API_TOKEN").ok().filter(|t| !t.is_empty());
 
         let api_port = env::var("API_PORT")
             .ok()

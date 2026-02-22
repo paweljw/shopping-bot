@@ -38,7 +38,10 @@ async fn main() {
             .expect("Failed to bind API port");
         log::info!("API server listening on port {}", port);
         tokio::spawn(async move {
-            axum::serve(listener, api::router(api_state)).await.unwrap();
+            if let Err(e) = axum::serve(listener, api::router(api_state)).await {
+                log::error!("API server error: {}", e);
+                std::process::exit(1);
+            }
         });
     }
 
