@@ -26,20 +26,9 @@ pub struct CommandProcessor {
 }
 
 impl CommandProcessor {
-    pub async fn new(config: Config) -> Arc<Self> {
-        // Use /data directory if it exists (Docker), otherwise /tmp
-        let db_path = if std::path::Path::new("/data").exists() {
-            "/data/shopping_list.db"
-        } else {
-            "/tmp/shopping_list.db"
-        };
-
-        let db = persistence_sqlite::ListRepo::new(db_path)
-            .await
-            .expect("Failed to initialize database");
-
+    pub async fn new(config: Config, db: Arc<persistence_sqlite::ListRepo>) -> Arc<Self> {
         Arc::new(Self {
-            db: Arc::new(db),
+            db,
             config: Arc::new(config),
         })
     }
