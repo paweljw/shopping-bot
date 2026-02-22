@@ -3,6 +3,7 @@ use std::env;
 pub struct Config {
     token: String,
     allowed_chat_ids: Vec<i64>,
+    notify_chat_ids: Vec<i64>,
     api_token: Option<String>,
     api_port: u16,
 }
@@ -11,15 +12,10 @@ impl Config {
     pub fn new() -> Result<Config, String> {
         let token = get_env_var("BOT_TOKEN")?;
 
-        let allowed_chat_ids = match env::var("ALLOWED_CHAT_IDS") {
-            Ok(ids_str) => {
-                ids_str
-                    .split(',')
-                    .filter_map(|s| s.trim().parse::<i64>().ok())
-                    .collect()
-            },
-            Err(_) => Vec::new(), // If not set, allow all chats (empty list means no restrictions)
-        };
+        let allowed_chat_ids = parse_id_list("ALLOWED_CHAT_IDS").unwrap_or_default();
+
+        let notify_chat_ids = parse_id_list("NOTIFY_CHAT_IDS")
+            .unwrap_or_else(|| allowed_chat_ids.clone());
 
         let api_token = env::var("API_TOKEN").ok().filter(|t| !t.is_empty());
 
@@ -31,6 +27,7 @@ impl Config {
         Ok(Config {
             token,
             allowed_chat_ids,
+            notify_chat_ids,
             api_token,
             api_port,
         })
@@ -56,15 +53,21 @@ impl Config {
         self.api_port
     }
 
-    pub fn allowed_chat_ids(&self) -> &[i64] {
-        &self.allowed_chat_ids
+    pub fn notify_chat_ids(&self) -> &[i64] {
+        &self.notify_chat_ids
     }
 }
 
 fn get_env_var(name: &str) -> Result<String, String> {
-    let result = env::var(name);
-    if result.is_err() {
-        return Err(format!("{} is not defined", name));
-    }
-    Ok(result.unwrap())
+    env::var(name).map_err(|_| format!("{} is not defined", name))
+}
+
+fn parse_id_list(name: &str) -> Option<Vec<i64>> {
+    let ids_str = env::var(name).ok().filter(|s| !s.trim().is_empty())?;
+    Some(
+        ids_str
+            .split(',')
+            .filter_map(|s| s.trim().parse::<i64>().ok())
+            .collect(),
+    )
 }

@@ -31,7 +31,7 @@ async fn main() {
 
     if let Some(api_token) = config.api_token() {
         let notify_chat_ids: Vec<ChatId> = config
-            .allowed_chat_ids()
+            .notify_chat_ids()
             .iter()
             .map(|&id| ChatId(id))
             .collect();
